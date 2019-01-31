@@ -1,0 +1,8 @@
+bs4
+requests
+redis
+google-search
+google
+wp-version-checker
+mailchimp
+pandas

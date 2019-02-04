@@ -4,4 +4,13 @@ services:
     build: .
     volumes:
       - ./:/code
+    environment:
+      - FIREBASE=
+      - FIREBASE_AUTH=/
+      - USER_ID=
+      - MATCH=wordpress
+      - MAILCHIMP_LIST=5555
+      - MAILCHIMP_API=
+      - HOW_MANY=5
+
     command: tail -f /etc/fstab

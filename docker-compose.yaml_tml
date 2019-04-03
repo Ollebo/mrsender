@@ -12,5 +12,4 @@ services:
       - MAILCHIMP_LIST=5555
       - MAILCHIMP_API=
       - HOW_MANY=5
-
-    command: tail -f /etc/fstab
+      - DELETE_AFTER=false

@@ -19,6 +19,7 @@ MATCH=os.environ['MATCH']
 MAILCHIMP_LIST=os.environ['MAILCHIMP_LIST']
 MAILCHIMP_API=os.environ['MAILCHIMP_API']
 HOW_MANY=int(os.environ['HOW_MANY'])
+DELETE_AFTER = os.environ['DELETE_AFTER']
 # Initialize the app with a service account, granting admin privileges
 firebase_admin.initialize_app(cred, {
     'databaseURL': os.environ['FIREBASE']
@@ -29,12 +30,46 @@ client = MailChimp(mc_api=MAILCHIMP_API)
 
 userToDelete=[]
 
+def logToUser(message):
+	print(message)
+	log_ref= 	ref = db.reference('/todos/'+USER_ID+'/stats/events')
+	result = log_ref.push(message)
+	print(result)
+
+
+
+def startUp():
+	'''
+	Will start and test if we have conenction to everything. And if not will shut down
+	'''
+	weGoodToGo=False
+	
+	## Test Mailchimp
+	mailChimpGood = addToMailchimp('mytestaccount@mantiser.com')
+
+	if mailChimpGood != False:
+		deleteFromMailchimp(mailChimpGood)
+		print("mailchimp good")
+		weGoodToGo = True
+	else:
+		logToUser('ERROR_SEARCHBOT_MAILCHIMP_ACCESS' )
+	
+
+	#Lets roll
+	if weGoodToGo:
+		findAndAddEmail()
+
+
+
+
 def deleteFromMailchimp(userhash):
 	'''
 	Delet the user from the list
 	'''
-	client.lists.members.delete(list_id=MAILCHIMP_LIST, subscriber_hash=userhash)
-
+	try:
+		client.lists.members.delete(list_id=MAILCHIMP_LIST, subscriber_hash=userhash)
+	except:
+		print('got error from mailchimp')
 
 
 def addToMailchimp(email):
@@ -52,16 +87,19 @@ def addToMailchimp(email):
 		           },
 		})
 		userToDelete.append(backFromMailchimp['id'])
+		print(backFromMailchimp)
+		return backFromMailchimp['id']
 
 	except:
 		print("Error update user")
+		return False
 
 
 def findAndAddEmail():
 	'''
 	Here is where we find and add emails
 	'''
-
+	logToUser('SEARCHBOT_STARTED' )
 	ref = db.reference('todos/'+USER_ID+'/emails')
 	ref_user = db.reference('todos/'+USER_ID+'/emails')
 	db_values = ref_user.get()
@@ -76,17 +114,26 @@ def findAndAddEmail():
 				
 	
 					#Lest se if we already have sent a email to this person
-					if MAILCHIMP_LIST in db_values[values]['EmailCampan']:
-						print("We habe already used this email here")
-	
-					else:
+					haveEmail=False
+					try:
+						if MAILCHIMP_LIST in db_values[values]['EmailCampan']:
+							print("We habe already used this email here")
+							haveEmail=True
+					except KeyError:
+							pass
+
+
+					if(haveEmail == False):
 						'''
 						Nice lets add the email to the list and update profile
 						'''
 						if HOW_MANY >= haveDone:
 							user = db_values[values]
 							box_ref = ref.child(values)
-							list_list=db_values[values]['EmailCampan']
+							try:
+								list_list=db_values[values]['EmailCampan']
+							except KeyError:
+								list_list=[]
 							list_list.append(MAILCHIMP_LIST)
 							#Add the user to Mailchimp
 							addToMailchimp(db_values[values]['email'])
@@ -104,6 +151,8 @@ def findAndAddEmail():
 					print(db_values[values])
 				else:
 					print("No match in words for email")
+					print(str(db_values[values][values2]).encode('utf8'))
+					print(MATCH)
 
 
 
@@ -112,10 +161,12 @@ def findAndAddEmail():
 	##
 	##  Time to clean up and delet the users from the mailchimp list
 	
-	time.sleep(300)
-	for user_hash in userToDelete:
-		deleteFromMailchimp(user_hash)
-
+	time.sleep(3)
+	if DELETE_AFTER == 'true':
+		for user_hash in userToDelete:
+			deleteFromMailchimp(user_hash)
+	
+	logToUser('SEARCHBOT_DONE' )
 
 ########################################
 ##
@@ -144,5 +195,7 @@ def clear_emaild_users():
 
 						#Update how many we have done 
 				print(updated)
-findAndAddEmail()				
+#findAndAddEmail()				
 #clear_emaild_users()
+#addToMailchimp('matte@ollebo.com')
+startUp()

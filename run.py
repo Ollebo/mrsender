@@ -2,6 +2,8 @@ import json
 import os
 import datetime
 import time
+import random
+import string
 from mailchimp3 import MailChimp
 
 
@@ -31,9 +33,14 @@ client = MailChimp(mc_api=MAILCHIMP_API)
 userToDelete=[]
 
 def logToUser(message):
+	now = datetime.datetime.now()
 	print(message)
 	log_ref= 	ref = db.reference('/todos/'+USER_ID+'/stats/events')
-	result = log_ref.push(message)
+	data = {
+			'message':message,
+        	'timestamp': now.isoformat(),
+	}
+	result = log_ref.push(data)
 	print(result)
 
 
@@ -45,14 +52,18 @@ def startUp():
 	weGoodToGo=False
 	
 	## Test Mailchimp
-	mailChimpGood = addToMailchimp('mytestaccount@mantiser.com')
+					
+	randomEmail = ''.join(random.choice(string.ascii_lowercase) for _ in range(8))
+	print(randomEmail)
+	mailChimpGood = addToMailchimp('test-api-{0}@mantiser.com'.format(randomEmail))
 
 	if mailChimpGood != False:
+		print(mailChimpGood)
 		deleteFromMailchimp(mailChimpGood)
 		print("mailchimp good")
 		weGoodToGo = True
 	else:
-		logToUser('ERROR_SEARCHBOT_MAILCHIMP_ACCESS' )
+		logToUser('ERROR_SEARCHBOT_MAILCHIMP_ACCESS API_KEY {0} LIST_ID {1}'.format(MAILCHIMP_API,MAILCHIMP_LIST) )
 	
 
 	#Lets roll
@@ -76,7 +87,7 @@ def addToMailchimp(email):
 	'''
 	Add the email to our mailchimp list
 	'''
-	
+	backFromMailchimp=""
 	try:
 		backFromMailchimp=client.lists.members.create(MAILCHIMP_LIST, {
 		    'email_address': '{0}'.format(email),
@@ -91,6 +102,7 @@ def addToMailchimp(email):
 		return backFromMailchimp['id']
 
 	except:
+		print(backFromMailchimp)
 		print("Error update user")
 		return False
 
@@ -99,7 +111,7 @@ def findAndAddEmail():
 	'''
 	Here is where we find and add emails
 	'''
-	logToUser('SEARCHBOT_STARTED' )
+	logToUser('SEARCHBOT_STARTED MATCH WORDS {0}'.format(MATCH))
 	ref = db.reference('todos/'+USER_ID+'/emails')
 	ref_user = db.reference('todos/'+USER_ID+'/emails')
 	db_values = ref_user.get()
@@ -166,7 +178,7 @@ def findAndAddEmail():
 		for user_hash in userToDelete:
 			deleteFromMailchimp(user_hash)
 	
-	logToUser('SEARCHBOT_DONE' )
+	logToUser('SEARCHBOT_FINNISH MATCH WORDS {0}'.format(MATCH))
 
 ########################################
 ##

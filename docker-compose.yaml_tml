@@ -4,6 +4,7 @@ services:
     build: .
     volumes:
       - ./:/code
+      - /home/mahe/.ssh:/keys
     environment:
       - FIREBASE=
       - FIREBASE_AUTH=/
